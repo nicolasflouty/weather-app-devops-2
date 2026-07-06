@@ -27,12 +27,26 @@ pipeline {
             }
         }
 
-        stage('Run Container') {
+        stage('Build & Push Image to Docker Hub') {
             steps {
                 sh '''
-                docker stop weather-app || true
-                docker rm weather-app || true
-                docker run -d -p 3000:3000 --name weather-app weather-app
+                echo nicolas1212 | docker login -u nicolasflouty --password-stdin
+
+                docker tag weather-app nicolasflouty/weather-app:latest
+                docker push nicolasflouty/weather-app:latest
+                '''
+            }
+        }
+
+        stage('Deploy to Staging') {
+            steps {
+                sh '''
+                ssh -i /var/jenkins_home/nicolas.pem -o StrictHostKeyChecking=no ubuntu@54.93.203.148 "
+                    docker pull nicolasflouty/weather-app:latest &&
+                    docker stop weather-app || true &&
+                    docker rm weather-app || true &&
+                    docker run -d -p 3000:3000 --name weather-app nicolasflouty/weather-app:latest
+                "
                 '''
             }
         }
